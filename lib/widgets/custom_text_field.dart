@@ -82,7 +82,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
                       onPressed: () => setState(() => _obscure = !_obscure),
                     )
                     : null,
-            hintText: 'Enter your ${widget.label.toLowerCase()}',
+            hintText:
+                widget.label == 'Confirm Password'
+                    ? 'Repeat your password'
+                    : 'Enter your ${widget.label.toLowerCase()}',
             hintStyle: const TextStyle(
               fontFamily: 'LexendDeca',
               fontWeight: FontWeight.normal,
@@ -105,6 +108,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFFF4D4F), width: 2),
+            ),
+            errorStyle: const TextStyle(
+              fontFamily: 'LexendDeca',
+              fontWeight: FontWeight.normal,
+              fontSize: 12,
+              color: Color(0xFFFF4D4F),
+              letterSpacing: 0.3,
             ),
           ),
         ),

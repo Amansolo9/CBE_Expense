@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'views/login_page.dart';
 import 'views/home_page.dart';
 import 'views/signup_page.dart';
+import 'views/session_check.dart';
 import 'firebase_app_check_setup.dart';
 
 void main() async {
@@ -19,8 +20,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Firebase Auth',
-      initialRoute: '/signup',
+      home: const SessionCheckPage(),
       routes: {
         '/login': (context) => LoginPage(),
         '/signup': (context) => SignupPage(),

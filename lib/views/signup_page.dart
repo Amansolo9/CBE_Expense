@@ -14,9 +14,11 @@ class _SignupPageState extends State<SignupPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final AuthService _authService = AuthService();
+  bool _isLoading = false;
 
   void _signup() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
       try {
         final name = _nameController.text.trim();
         final email = _emailController.text.trim();
@@ -25,19 +27,66 @@ class _SignupPageState extends State<SignupPage> {
         final user = await _authService.signUp(email, password, name);
         if (user != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Signup successful! Welcome, $name!')),
+            SnackBar(
+              content: Center(
+                child: Text(
+                  'Signup successful! Welcome, $name!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'LexendDeca',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              backgroundColor: Color(0xFFCD359C),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
           await Future.delayed(Duration(milliseconds: 800));
           Navigator.pushReplacementNamed(context, '/login');
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Signup failed.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Center(
+                child: Text(
+                  'Signup failed.',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'LexendDeca',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              backgroundColor: Color(0xFFCD359C),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Signup failed.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Center(
+              child: Text(
+                'Signup failed.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'LexendDeca',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            backgroundColor: Color(0xFFCD359C),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
@@ -213,8 +262,22 @@ class _SignupPageState extends State<SignupPage> {
                                 letterSpacing: 0.3,
                               ),
                             ),
-                            onPressed: _signup,
-                            child: const Text('Sign Up'),
+                            onPressed: _isLoading ? null : _signup,
+                            child:
+                                _isLoading
+                                    ? SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Color(0xFFCD359C),
+                                            ),
+                                        backgroundColor: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                    : const Text('Sign Up'),
                           ),
                         ),
                         const SizedBox(height: 24),
