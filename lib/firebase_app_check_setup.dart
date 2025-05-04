@@ -7,6 +7,6 @@ Future<void> setupFirebaseAppCheck() async {
     appleProvider: AppleProvider.debug,
     webProvider: ReCaptchaV3Provider(
       'recaptcha-public-key',
-    ), // Replace with your key if needed
+    ),
   );
 }

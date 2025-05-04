@@ -28,7 +28,6 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } catch (e) {
-      // ignore
     }
     return null;
   }

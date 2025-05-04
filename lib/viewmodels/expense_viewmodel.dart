@@ -46,4 +46,31 @@ class ExpenseViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> editExpense(
+    String expenseId,
+    Map<String, dynamic> updatedData,
+  ) async {
+    try {
+      await _service.editExpense(uid, expenseId, updatedData);
+      await fetchExpenses();
+      return true;
+    } catch (e) {
+      error = 'Failed to edit expense: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteExpense(String expenseId) async {
+    try {
+      await _service.deleteExpense(uid, expenseId);
+      await fetchExpenses();
+      return true;
+    } catch (e) {
+      error = 'Failed to delete expense: $e';
+      notifyListeners();
+      return false;
+    }
+  }
 }

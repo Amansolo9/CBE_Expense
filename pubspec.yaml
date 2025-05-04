@@ -19,6 +19,7 @@ dependencies:
   intl: ^0.20.2
   another_telephony: ^0.4.1
   provider: ^6.1.4
+  fl_chart: ^0.71.0
 
 dev_dependencies:
   flutter_test:

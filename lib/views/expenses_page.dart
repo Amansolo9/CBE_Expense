@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../viewmodels/expense_viewmodel.dart';
+import '../widgets/expenses_list.dart';
 
 class ExpensesPage extends StatefulWidget {
   @override
@@ -65,13 +66,14 @@ class _ExpensesView extends StatelessWidget {
   const _ExpensesView();
 
   void _showAddExpenseDialog(BuildContext context, ExpenseViewModel vm) {
-    final _formKey = GlobalKey<FormState>();
+    final formKey = GlobalKey<FormState>();
     final amountController = TextEditingController();
     DateTime selectedDate = DateTime.now();
     String? selectedCategory;
     String? customCategory;
     final descController = TextEditingController();
     bool showCustomCategory = false;
+    bool isAdding = false;
     showDialog(
       context: context,
       builder: (context) {
@@ -91,7 +93,7 @@ class _ExpensesView extends StatelessWidget {
               ),
               content: SingleChildScrollView(
                 child: Form(
-                  key: _formKey,
+                  key: formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -246,7 +248,9 @@ class _ExpensesView extends StatelessWidget {
                     ),
                   ),
                   onPressed: () async {
-                    if (_formKey.currentState?.validate() != true) return;
+                    if (formKey.currentState?.validate() != true || isAdding)
+                      return;
+                    setState(() => isAdding = true);
                     final amount = double.parse(amountController.text);
                     final category =
                         showCustomCategory ? customCategory : selectedCategory;
@@ -257,19 +261,14 @@ class _ExpensesView extends StatelessWidget {
                       category: category,
                       description: desc,
                     );
+                    setState(() => isAdding = false);
                     if (success && context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Center(
                             child: Text(
-                              'Expense added!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontFamily: 'LexendDeca',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                              'Expense added successfully!',
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -282,13 +281,7 @@ class _ExpensesView extends StatelessWidget {
                         SnackBar(
                           content: Center(
                             child: Text(
-                              vm.error ?? 'Failed to add expense',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontFamily: 'LexendDeca',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                              'Failed to add expense. Please try again.',
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -298,7 +291,16 @@ class _ExpensesView extends StatelessWidget {
                       );
                     }
                   },
-                  child: const Text('Add'),
+                  child:
+                      isAdding
+                          ? const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFFCD359C),
+                            ),
+                            backgroundColor: Colors.white,
+                            strokeWidth: 3,
+                          )
+                          : const Text('Add'),
                 ),
               ],
             );
@@ -306,6 +308,279 @@ class _ExpensesView extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<bool> showEditExpenseDialog(
+    BuildContext context,
+    ExpenseViewModel vm,
+    Map<String, dynamic> expense,
+  ) async {
+    final formKey = GlobalKey<FormState>();
+    final amountController = TextEditingController(
+      text: expense['amount'].toString(),
+    );
+    DateTime selectedDate =
+        expense['date'] is DateTime
+            ? expense['date']
+            : (expense['date'] as Timestamp).toDate();
+    String? selectedCategory = expense['category'];
+    String? customCategory;
+    final descController = TextEditingController(text: expense['description']);
+    bool showCustomCategory = selectedCategory == 'Other';
+    bool isEditing = false;
+
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return AlertDialog(
+                  title: const Text('Edit Expense'),
+                  content: SingleChildScrollView(
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: amountController,
+                            keyboardType: TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Amount',
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty)
+                                return 'Amount is required';
+                              if (double.tryParse(value) == null)
+                                return 'Enter a valid number';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Text('Date:'),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    final pickedDate = await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate,
+                                      firstDate: DateTime(2000),
+                                      lastDate: DateTime.now(),
+                                    );
+                                    if (pickedDate != null) {
+                                      setState(() => selectedDate = pickedDate);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 12,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      DateFormat(
+                                        'yyyy-MM-dd',
+                                      ).format(selectedDate),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<String>(
+                            value: selectedCategory,
+                            items:
+                                [
+                                      'Food',
+                                      'Transport',
+                                      'Entertainment',
+                                      'Bills',
+                                      'Shopping',
+                                      'Other',
+                                    ]
+                                    .map(
+                                      (category) => DropdownMenuItem(
+                                        value: category,
+                                        child: Text(category),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                selectedCategory = value;
+                                showCustomCategory = value == 'Other';
+                              });
+                            },
+                            decoration: const InputDecoration(
+                              labelText: 'Category',
+                            ),
+                          ),
+                          if (showCustomCategory)
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Custom Category',
+                              ),
+                              onChanged: (value) => customCategory = value,
+                            ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: descController,
+                            decoration: const InputDecoration(
+                              labelText: 'Description (Optional)',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          isEditing
+                              ? null
+                              : () async {
+                                if (!formKey.currentState!.validate()) return;
+                                setState(() => isEditing = true);
+                                final success = await vm
+                                    .editExpense(expense['id'], {
+                                      'amount': double.parse(
+                                        amountController.text,
+                                      ),
+                                      'date': selectedDate,
+                                      'category':
+                                          showCustomCategory
+                                              ? customCategory
+                                              : selectedCategory,
+                                      'description': descController.text,
+                                    });
+                                setState(() => isEditing = false);
+                                if (success && context.mounted) {
+                                  Navigator.pop(context, true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Center(
+                                        child: Text(
+                                          'Expense edited successfully!',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      backgroundColor: Color(0xFFCD359C),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                } else if (!success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Center(
+                                        child: Text(
+                                          'Failed to edit expense. Please try again.',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      backgroundColor: const Color(0xFFCD359C),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                      child:
+                          isEditing
+                              ? const CircularProgressIndicator()
+                              : const Text('Save'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ) ??
+        false;
+  }
+
+  Future<bool> showDeleteExpenseDialog(
+    BuildContext context,
+    ExpenseViewModel vm,
+    String expenseId,
+  ) async {
+    bool isDeleting = false;
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return StatefulBuilder(
+              builder: (context, setState) {
+                return AlertDialog(
+                  title: const Text('Delete Expense'),
+                  content: const Text(
+                    'Are you sure you want to delete this expense?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          isDeleting
+                              ? null
+                              : () async {
+                                setState(() => isDeleting = true);
+                                final success = await vm.deleteExpense(
+                                  expenseId,
+                                );
+                                setState(() => isDeleting = false);
+                                if (success && context.mounted) {
+                                  Navigator.pop(context, true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Center(
+                                        child: Text(
+                                          'Expense deleted successfully!',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      backgroundColor: Color(0xFFCD359C),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                } else if (!success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Center(
+                                        child: Text(
+                                          'Failed to delete expense. Please try again.',
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                      backgroundColor: const Color(0xFFCD359C),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                      child:
+                          isDeleting
+                              ? const CircularProgressIndicator()
+                              : const Text('Delete'),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ) ??
+        false;
   }
 
   @override
@@ -324,7 +599,6 @@ class _ExpensesView extends StatelessWidget {
             child: Text(vm.error!, style: const TextStyle(color: Colors.red)),
           );
         } else {
-          // Group expenses by year/month/day
           final grouped =
               <String, Map<String, Map<String, List<Map<String, dynamic>>>>>{};
           for (final exp in vm.expenses) {
@@ -348,219 +622,36 @@ class _ExpensesView extends StatelessWidget {
               ),
             );
           } else {
-            body = ListView(
-              padding: const EdgeInsets.all(16),
-              children:
-                  grouped.entries.map((yearEntry) {
-                    final List<Widget> monthWidgets =
-                        yearEntry.value.entries.map((monthEntry) {
-                          final List<Widget> dayWidgets =
-                              monthEntry.value.entries
-                                  .map(
-                                    (dayEntry) => Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                            left: 16,
-                                            top: 6,
-                                          ),
-                                          child: Text(
-                                            'Day ${dayEntry.key}',
-                                            style: const TextStyle(
-                                              fontFamily: 'LexendDeca',
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15,
-                                              color: Color(0xFF333333),
-                                            ),
-                                          ),
-                                        ),
-                                        ...dayEntry.value.map(
-                                          (exp) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              left: 32,
-                                              top: 6,
-                                              bottom: 6,
-                                            ),
-                                            child: Card(
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              elevation: 2,
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      vertical: 12,
-                                                      horizontal: 16,
-                                                    ),
-                                                child: Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            'ETB ${exp['amount'].toStringAsFixed(2)}',
-                                                            style: const TextStyle(
-                                                              fontFamily:
-                                                                  'LexendDeca',
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              fontSize: 16,
-                                                              color: Color(
-                                                                0xFFCD359C,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          if (exp['category'] !=
-                                                                  null &&
-                                                              (exp['category']
-                                                                      as String)
-                                                                  .isNotEmpty)
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    top: 2,
-                                                                  ),
-                                                              child: Text(
-                                                                exp['category'],
-                                                                style: const TextStyle(
-                                                                  fontFamily:
-                                                                      'LexendDeca',
-                                                                  fontSize: 14,
-                                                                  color: Color(
-                                                                    0xFFB29365,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          if (exp['description'] !=
-                                                                  null &&
-                                                              (exp['description']
-                                                                      as String)
-                                                                  .isNotEmpty)
-                                                            Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    top: 2,
-                                                                  ),
-                                                              child: Text(
-                                                                exp['description'],
-                                                                style: const TextStyle(
-                                                                  fontFamily:
-                                                                      'LexendDeca',
-                                                                  fontSize: 13,
-                                                                  color: Color(
-                                                                    0xFF333333,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  top: 2,
-                                                                ),
-                                                            child: Text(
-                                                              DateFormat(
-                                                                'yyyy-MM-dd',
-                                                              ).format(
-                                                                exp['date']
-                                                                        is DateTime
-                                                                    ? exp['date']
-                                                                    : (exp['date']
-                                                                            as Timestamp)
-                                                                        .toDate(),
-                                                              ),
-                                                              style: const TextStyle(
-                                                                fontFamily:
-                                                                    'LexendDeca',
-                                                                fontSize: 12,
-                                                                color: Color(
-                                                                  0xFF999999,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    Row(
-                                                      children: [
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                            Icons.edit,
-                                                            color: Color(
-                                                              0xFFB29365,
-                                                            ),
-                                                          ),
-                                                          onPressed:
-                                                              () {}, // To be implemented
-                                                        ),
-                                                        IconButton(
-                                                          icon: const Icon(
-                                                            Icons.delete,
-                                                            color: Color(
-                                                              0xFFCD359C,
-                                                            ),
-                                                          ),
-                                                          onPressed:
-                                                              () {}, // To be implemented
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                  .toList();
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8, top: 8),
-                                child: Text(
-                                  monthEntry.key,
-                                  style: const TextStyle(
-                                    fontFamily: 'LexendDeca',
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: Color(0xFFB29365),
-                                  ),
-                                ),
-                              ),
-                              ...dayWidgets,
-                            ],
-                          );
-                        }).toList();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          yearEntry.key,
-                          style: const TextStyle(
-                            fontFamily: 'LexendDeca',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            color: Color(0xFFCD359C),
-                          ),
-                        ),
-                        ...monthWidgets,
-                      ],
-                    );
-                  }).toList(),
+            body = ExpensesList(
+              groupedExpenses: grouped,
+              onEdit: (expense) async {
+                final vm = Provider.of<ExpenseViewModel>(
+                  context,
+                  listen: false,
+                );
+                final success = await showEditExpenseDialog(
+                  context,
+                  vm,
+                  expense,
+                );
+                if (success) {
+                  vm.fetchExpenses();
+                }
+              },
+              onDelete: (expense) async {
+                final vm = Provider.of<ExpenseViewModel>(
+                  context,
+                  listen: false,
+                );
+                final success = await showDeleteExpenseDialog(
+                  context,
+                  vm,
+                  expense['id'],
+                );
+                if (success) {
+                  vm.fetchExpenses();
+                }
+              },
             );
           }
         }

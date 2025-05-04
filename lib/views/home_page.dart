@@ -1,7 +1,9 @@
 import '../services/auth_service.dart';
+import '../viewmodels/analytics_viewmodel.dart';
 import 'package:feather_icons/feather_icons.dart';
 import 'expenses_page.dart';
 import 'messages_page.dart';
+import 'analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -111,6 +113,37 @@ class _HomePageState extends State<HomePage> {
             ),
             ListTile(
               leading: const Icon(
+                FeatherIcons.barChart2,
+                color: Color(0xFFCD359C),
+              ),
+              title: const Text(
+                'Analytics',
+                style: TextStyle(fontFamily: 'LexendDeca'),
+              ),
+              onTap: () async {
+                final uid = await _authService.getSessionUid();
+                if (uid != null) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder:
+                          (context) => AnalyticsPage(
+                            viewModel: AnalyticsViewModel(uid: uid),
+                          ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Failed to load user data. Please try again.',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(
                 FeatherIcons.logOut,
                 color: Color(0xFFCD359C),
               ),
@@ -119,6 +152,29 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontFamily: 'LexendDeca'),
               ),
               onTap: _logout,
+            ),
+            const SizedBox(height: 200),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text('Amanuel Ayana', style: TextStyle(fontSize: 20 ,fontFamily: 'WinkyRough', color: Color(0xFFCD359C))),
+                  const Divider(),
+                  Text('Amanuel Dagnachew', style: TextStyle(fontSize: 20 ,fontFamily: 'WinkyRough', color: Color(0xFFCD359C))),
+                  const Divider(),
+                  Text('Amanuel Mandefro', style: TextStyle(fontSize: 20 ,fontFamily: 'WinkyRough', color: Color(0xFFCD359C))),
+                  const Divider(),
+                  Text('Amanuel Solomon', style: TextStyle(fontSize: 20 ,fontFamily: 'WinkyRough', color: Color(0xFFCD359C))),
+                  const Divider(),
+                  Text('Beamanuel Tesfaye', style: TextStyle(fontSize: 20 ,fontFamily: 'WinkyRough', color: Color(0xFFCD359C))),
+                  SizedBox(height: 16),
+                  Center(
+                    child: Text('Made with <3', style: TextStyle(fontFamily: 'WinkyRough', color: Color(0xFFCD359C), fontStyle: FontStyle.italic)),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
